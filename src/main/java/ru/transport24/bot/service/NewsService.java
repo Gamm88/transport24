@@ -11,7 +11,6 @@ import ru.transport24.bot.repository.NewsRepository;
 import ru.transport24.bot.exception.NotFoundException;
 
 import java.io.IOException;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -39,40 +38,8 @@ public class NewsService {
                     .link(link)
                     .build();
             newsRepository.save(news);
-            log.info("\nСохранена новость => " + news.toString());
+            log.info("\nСохранена новость => " + news);
         }
-    }
-
-    /*
-    // Добавить новость в БД.
-    News addNews(String text) {
-        // Создаём новость.
-        News news = new News();
-        // Заголовок - в квадратных скобках [заголовок].
-        news.setTitle(text.substring(text.indexOf("[") + 1, text.indexOf("]")));
-        // Содержание - в треугольных скобках <ссылка>.
-        news.setContent(text.substring(text.indexOf("<") + 1, text.indexOf(">")));
-        // Ссылка - в фигурных скобках {ссылка}.
-        news.setLink(text.substring(text.indexOf("{") + 1, text.indexOf("}")));
-        // Путь хранения фотографии.
-        news.setPhoto("C:/Transport24/Files/" + news.getId() + ".png");
-        // Сохраняем и возвращаем новость.
-        newsRepository.save(news);
-        log.info("Добавлена новость: " + news);
-        return news;
-    }
-
-     */
-
-    // Удалить новость из БД.
-    void deleteNews(String text) {
-        // ИД новости - в квадратных скобках [ИД].
-        Long newsID = Long.valueOf(text.substring(text.indexOf("[") + 1, text.indexOf("]")));
-        // Проверяем наличие новость с таким ИД.
-        News news = getNews(newsID);
-        // Удаляем новость.
-        newsRepository.deleteById(newsID);
-        log.info("Удалена новость: " + news);
     }
 
     // Поиск новости в БД.
@@ -80,10 +47,5 @@ public class NewsService {
         return newsRepository
                 .findById(newsId)
                 .orElseThrow(() -> new NotFoundException("Новость с ИД: " + newsId + ", не найдена!"));
-    }
-
-    // Поиск топ 3 новости в БД.
-    public List<News> getTop3News() {
-        return newsRepository.findTop3ByOrderByIdDesc();
     }
 }

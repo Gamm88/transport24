@@ -1,10 +1,9 @@
 package ru.transport24.bot.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.telegram.telegrambots.meta.api.objects.webapp.WebAppInfo;
-import ru.transport24.bot.model.News;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.telegram.telegrambots.meta.api.objects.webapp.WebAppInfo;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
@@ -215,23 +214,6 @@ public class MarkupService {
                 rowsInLine.add(rowInLine2);
                 rowsInLine.add(rowInLine3);
                 rowsInLine.add(rowInLine4);
-
-                markup.setKeyboard(rowsInLine);
-            }
-
-            /*
-            КОНТРОЛЬ КАРТ
-            */
-
-            // Клавиатура для раздела меню - Контроль карт оплаты проезда.
-            case "BALANCE" -> {
-                rowInLine1.add(trackAddCard);
-                rowInLine2.add(trackDeleteCard);
-                rowInLine3.add(userCards);
-
-                rowsInLine.add(rowInLine1);
-                rowsInLine.add(rowInLine2);
-                rowsInLine.add(rowInLine3);
 
                 markup.setKeyboard(rowsInLine);
             }

@@ -45,7 +45,6 @@ public class NotificationService {
         // Создаём таймер - задание (метод task), время начала (today), повторного срабатывания (через 12 часов)
         Timer timer = new Timer("Timer");
         timer.schedule(task, today.getTime(), 43200000);
-
     }
 
     // Метод отправки уведомлений пользователям если их карта в стоп-листе, мало средств, поездок.

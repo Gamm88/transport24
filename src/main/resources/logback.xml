@@ -1,0 +1,37 @@
+<!-- Запись логов -->
+<configuration>
+    <!-- Где храним логи -->
+    <property name="HOME_LOG" value="C:/TelegramBots/logback/transport24/app.log"/>
+    <!-- Как пишутся логи - путём добавления логов в уже имеющийся файл -->
+    <appender name="FILE-ROLLING" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${HOME_LOG}</file>
+        <!-- Параметры файлов для логов -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- Название файла - для каждого файла добавляем дату и номер -->
+            <fileNamePattern>/var/log/transport24.ru/bot/app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <!-- Максимальный размер 1 файла - 10MB -->
+            <maxFileSize>10MB</maxFileSize>
+            <!-- Максимальный размер всех архивов, при превышении удаляем старые -->
+            <totalSizeCap>1GB</totalSizeCap>
+            <!-- Максимальная глубина хранения - 120 дней -->
+            <maxHistory>120</maxHistory>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>%d %p %c{1} [%t] %m%n</pattern>
+        </encoder>
+    </appender>
+    <!-- Уровень логов которые будем записывать -->
+    <logger name="transport24.ru.bot" level="debug" additivity="false">
+        <appender-ref ref="FILE-ROLLING"/>
+    </logger>
+
+    <root level="error">
+        <appender-ref ref="FILE-ROLLING"/>
+    </root>
+
+    <root level="info">
+        <appender-ref ref="FILE-ROLLING"/>
+    </root>
+
+</configuration>

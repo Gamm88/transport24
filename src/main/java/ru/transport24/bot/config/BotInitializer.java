@@ -19,6 +19,7 @@ public class BotInitializer {
     final TelegramBot telegramBot;
     final NotificationService notificationService;
 
+    // Регистрация и запуск бота
     @EventListener({ContextRefreshedEvent.class})
     public void init() throws TelegramApiException {
         TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
