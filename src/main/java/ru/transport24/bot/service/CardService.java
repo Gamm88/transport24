@@ -125,7 +125,7 @@ public class CardService {
                         "\nwww.sberbank.ru/ru/certificates";
                 // Если задолженность есть.
             } else {
-                balance = "Карта №" + cardNumber + " находится в стоп-листе," +
+                balance = "Банковская карта №" + cardNumber + " находится в стоп-листе," +
                         " задолженность составляет " + debt + " руб." +
                         "\n" +
                         "\nДля оплаты задолженности, необходимо зарегистрироваться в личном кабинете пассажира:" +
@@ -209,17 +209,13 @@ public class CardService {
                 .build();
         // Выполняем запрос.
         try (Response response = client.newCall(request).execute()) {
-            // Проверяем был ли запрос успешен.
-            if (!response.isSuccessful()) {
-                throw new IOException("Запрос к серверу не был успешен: " +
-                        response.code() + " " + response.message());
-            }
             // Тело ответа.
             HashMap<String, String> responseBody = new ObjectMapper().readValue(response.body().string(), HashMap.class);
             // Устанавливаем баланс банковской карты.
             card.setBalance(Integer.parseInt(responseBody.entrySet().iterator().next().getValue()) / 100);
         } catch (IOException e) {
-            System.out.println("Ошибка подключения: " + e);
+            log.info("Ошибка подключения к " + request.url() + ", ошибка: " + e);
+            throw new ValidatorExceptions("Не удалось проверить баланс, попробуйте ещё раз через минуту!");
         }
     }
 
@@ -234,11 +230,6 @@ public class CardService {
                 .build();
         // Выполняем запрос.
         try (Response response = client.newCall(request).execute()) {
-            // Проверяем был ли запрос успешен.
-            if (!response.isSuccessful()) {
-                throw new IOException("Запрос к серверу не был успешен: " +
-                        response.code() + " " + response.message());
-            }
             // Тело ответа.
             HashMap<String, String> responseBody = new ObjectMapper().readValue(response.body().string(), HashMap.class);
             // Если ошибка в номере карты.
@@ -248,7 +239,8 @@ public class CardService {
             // Устанавливаем баланс транспортной карты.
             card.setBalance(Integer.valueOf(responseBody.get("balance").split("\\.")[0]));
         } catch (IOException e) {
-            System.out.println("Ошибка подключения: " + e);
+            log.info("Ошибка подключения к " + request.url() + ", ошибка: " + e);
+            throw new ValidatorExceptions("Не удалось проверить баланс, попробуйте ещё раз через минуту!");
         }
     }
 
@@ -263,11 +255,6 @@ public class CardService {
                 .build();
         // Выполняем запрос.
         try (Response response = client.newCall(request).execute()) {
-            // Проверяем был ли запрос успешен.
-            if (!response.isSuccessful()) {
-                throw new IOException("Запрос к серверу не был успешен: " +
-                        response.code() + " " + response.message());
-            }
             // Тело ответа.
             HashMap<String, String> responseBody = new ObjectMapper().readValue(response.body().string(), HashMap.class);
             // Если ошибка в номере карты.
@@ -278,7 +265,8 @@ public class CardService {
             card.setBaseTrips(Integer.valueOf(responseBody.get("left_base_trips")));
             card.setDopTrips(Integer.valueOf(responseBody.get("left_dop_trips")));
         } catch (IOException e) {
-            System.out.println("Ошибка подключения: " + e);
+            log.info("Ошибка подключения к " + request.url() + ", ошибка: " + e);
+            throw new ValidatorExceptions("Не удалось проверить баланс, попробуйте ещё раз через минуту!");
         }
     }
 }

@@ -34,6 +34,39 @@ public class MarkupService {
         List<InlineKeyboardButton> rowInLine5 = new ArrayList<>();
 
         /*
+        Раздел - Деятельность легкового такси.
+        */
+        // Кнопка - Деятельность легкового такси - Главные изменения.
+        var mainChanges = new InlineKeyboardButton();
+        mainChanges.setText("Главное в обновлённом законе");
+        mainChanges.setCallbackData("MAIN_CHANGES");
+
+        // Кнопка - Деятельность легкового такси - Кто может работать в такси.
+        var whoCanWorkInTaxi = new InlineKeyboardButton();
+        whoCanWorkInTaxi.setText("Как получить разрешение");
+        whoCanWorkInTaxi.setCallbackData("WHO_CAN_WORK_IN_TAXI");
+
+        // Кнопка - Деятельность легкового такси - Требования к водителям.
+        var restrictionForDrivers = new InlineKeyboardButton();
+        restrictionForDrivers.setText("Требования к водителям");
+        restrictionForDrivers.setCallbackData("RESTRICTION_FOR_DRIVERS");
+
+        // Кнопка - Деятельность легкового такси - Требования к автомобилям.
+        var requirementsForCars = new InlineKeyboardButton();
+        requirementsForCars.setText("Требования к автомобилям");
+        requirementsForCars.setCallbackData("REQUIREMENTS_FOR_CARS");
+
+        // Кнопка - Деятельность легкового такси - Реестры.
+        var register = new InlineKeyboardButton();
+        register.setText("Реестры легкового такси");
+        register.setCallbackData("REGISTER");
+
+        // Кнопка - Банковская карта - Назад
+        var taxiBack = new InlineKeyboardButton();
+        taxiBack.setText("← Назад");
+        taxiBack.setCallbackData("TAXI_BACK");
+
+        /*
         Раздел - Оплата проезда Банковской картой
         */
 
@@ -76,7 +109,7 @@ public class MarkupService {
 
         // Кнопка - Банковская карта - Назад
         var bankCardBack = new InlineKeyboardButton();
-        bankCardBack.setText("<- Назад");
+        bankCardBack.setText("← Назад");
         bankCardBack.setCallbackData("BANK_CARD_BACK");
 
         /*
@@ -202,8 +235,7 @@ public class MarkupService {
             /*
             ОНЛАЙН ДВИЖЕНИЕ ТРАНСПОРТА
             */
-
-            // Клавиатура для раздела меню - Онлайн движение транспорта
+            // Клавиатура для раздела меню - Онлайн движение транспорта.
             case "/online" -> {
                 rowInLine1.add(onlineBusYandexLink);
                 rowInLine2.add(gisLink);
@@ -215,6 +247,34 @@ public class MarkupService {
                 rowsInLine.add(rowInLine3);
                 rowsInLine.add(rowInLine4);
 
+                markup.setKeyboard(rowsInLine);
+            }
+
+            /*
+            ДЕЯТЕЛЬНОСТЬ ЛЕГКОВОГО ТАКСИ
+            */
+
+            // Клавиатура для раздела меню - Деятельность легкового такси.
+            case "/taxi", "TAXI_BACK" -> {
+                rowInLine1.add(mainChanges);
+                rowInLine2.add(whoCanWorkInTaxi);
+                rowInLine3.add(restrictionForDrivers);
+                rowInLine4.add(requirementsForCars);
+                rowInLine5.add(register);
+
+                rowsInLine.add(rowInLine1);
+                rowsInLine.add(rowInLine2);
+                rowsInLine.add(rowInLine3);
+                rowsInLine.add(rowInLine4);
+                rowsInLine.add(rowInLine5);
+
+                markup.setKeyboard(rowsInLine);
+            }
+
+            // Клавиатура для возврата назад, в основное раздел - Деятельность легкового такси.
+            case "MAIN_CHANGES", "WHO_CAN_WORK_IN_TAXI", "RESTRICTION_FOR_DRIVERS", "REQUIREMENTS_FOR_CARS", "REGISTER" -> {
+                rowInLine1.add(taxiBack);
+                rowsInLine.add(rowInLine1);
                 markup.setKeyboard(rowsInLine);
             }
 
@@ -345,7 +405,7 @@ public class MarkupService {
 
                 markup.setKeyboard(rowsInLine);
             }
-
+            // Клавиатура для оплаты проезда QR кодом
             case "/qrcod" -> {
                 rowInLine1.add(qrCodeLink);
 

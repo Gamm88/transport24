@@ -8,7 +8,7 @@
         <!-- Параметры файлов для логов -->
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!-- Название файла - для каждого файла добавляем дату и номер -->
-            <fileNamePattern>/var/log/transport24.ru/bot/app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <fileNamePattern>C:/TelegramBots/logback/transport24/app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
             <!-- Максимальный размер 1 файла - 10MB -->
             <maxFileSize>10MB</maxFileSize>
             <!-- Максимальный размер всех архивов, при превышении удаляем старые -->
@@ -22,7 +22,7 @@
         </encoder>
     </appender>
     <!-- Уровень логов которые будем записывать -->
-    <logger name="transport24.ru.bot" level="debug" additivity="false">
+    <logger name="ru.transport24.bot" level="debug" additivity="false">
         <appender-ref ref="FILE-ROLLING"/>
     </logger>
 

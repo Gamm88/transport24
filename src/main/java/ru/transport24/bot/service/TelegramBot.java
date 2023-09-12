@@ -4,14 +4,13 @@ import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.webapp.WebAppInfo;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.transport24.bot.config.BotConfig;
 import ru.transport24.bot.exception.ValidatorExceptions;
@@ -46,6 +45,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<BotCommand> listOfCommands = new ArrayList<>();
         listOfCommands.add(new BotCommand("/schedule", "Маршруты, расписание, билеты"));
         listOfCommands.add(new BotCommand("/online", "Онлайн движение транспорта"));
+        listOfCommands.add(new BotCommand("/taxi", "Деятельность легкового такси"));
         listOfCommands.add(new BotCommand("/track", "Контроль карт оплаты проезда"));
         listOfCommands.add(new BotCommand("/bcard", "Оплата проезда Банковской картой"));
         listOfCommands.add(new BotCommand("/tcard", "Оплата проезда Транспортной картой"));
@@ -72,11 +72,14 @@ public class TelegramBot extends TelegramLongPollingBot {
     // Метод вызывается всякий раз, когда будет доступно новое обновление (входящее сообщение у бота).
     @Override
     public void onUpdateReceived(Update update) {
+        System.out.println(update);
         // Обработка сообщений типа - CallbackQuery (кнопка).
         if (update.hasCallbackQuery()) {
             // Определяем кнопку.
             String data = update.getCallbackQuery().getData();
             log.info("Нажата кнопка => " + data);
+            // Определяем ИД сообщения.
+            Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
             // ИД чата (пользователя), где пришло сообщение.
             Long chatId = update.getCallbackQuery().getMessage().getChat().getId();
             // Действия.
@@ -86,7 +89,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                 return;
             }
             // Ответное сообщение
-            sendMessage(chatId, data, MessageType.BUTTON);
+            //sendMessage(chatId, data, MessageType.BUTTON);
+            editMessage(messageId, chatId, data);
             return;
         }
 
@@ -123,9 +127,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (chatId.equals(adminId)) {
             // Отправка сообщения пользователю по форме - sm [ид пользователя] {сообщение}
             if (text.toLowerCase().contains("sm")) {
+                text = incomingMessage.getText();
                 Long userID = Long.valueOf(text.substring(text.indexOf("[") + 1, text.indexOf("]")));
                 String massage = text.substring(text.indexOf("{") + 1, text.indexOf("}"));
                 sendMessage(userID, massage, MessageType.OTHER);
+                return;
             }
         }
 
@@ -143,7 +149,11 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         // Добавление карты для контроля (текст содержит ключевое слово - добавить).
         if (text.toLowerCase().contains("добавить")) {
-            sendMessage(chatId, cardService.addCard(chatId, text, update), MessageType.OTHER);
+            try {
+                sendMessage(chatId, cardService.addCard(chatId, text, update), MessageType.OTHER);
+            } catch (ValidatorExceptions e) {
+                sendMessage(chatId, e.getMessage(), MessageType.OTHER);
+            }
             return;
         }
 
@@ -154,28 +164,27 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
         // Ошибки, предложения и жалобы отправленные в чат.
-        if (text.toLowerCase().contains("ошибк") || text.toLowerCase().contains("предлож") || text.toLowerCase().contains("жалоб")) {
+        if (text.toLowerCase().contains("ошибк") || text.toLowerCase().contains("предлож")
+                || text.toLowerCase().contains("жалоб") || text.toLowerCase().contains("вопрос")) {
             sendMessage(adminId, userService.getUser(chatId).toString() + "\n" + text, MessageType.OTHER);
             return;
         }
 
         // Возможно пользователь хочет узнать баланс карты - Банковской, Транспортной, Социальной.
-        if (text.length() > 11) {
-            // Получаем номер карты из сообщения (удаляем все кроме цифр).
-            String cardNumber = update.getMessage().getText().replaceAll("\\D+", "");
-            // Если количество цифр > 11, то выполняем проверку баланса карты или нахождение в стоп-листе.
-            if (cardNumber.length() > 11) {
-                try {
-                    sendMessage(chatId, cardService.cardBalance(cardNumber), MessageType.OTHER);
-                } catch (ValidatorExceptions e) {
-                    sendMessage(chatId, e.getMessage(), MessageType.OTHER);
-                }
+        // Получаем номер карты из сообщения (удаляем все кроме цифр).
+        String cardNumber = update.getMessage().getText().replaceAll("\\D+", "");
+        // Если цифры есть и их больше 3, то выполняем проверку баланса карты или нахождение в стоп-листе.
+        if (cardNumber.length() > 3) {
+            try {
+                sendMessage(chatId, cardService.cardBalance(cardNumber), MessageType.OTHER);
+            } catch (ValidatorExceptions e) {
+                sendMessage(chatId, e.getMessage(), MessageType.OTHER);
             }
             return;
         }
 
         // Подбор ответов на текст в чате.
-        if (text.contains("лист") || text.contains("стоп")) {
+        if (text.contains("стоп") || text.contains("черн") || text.contains("чёрн") || text.contains("блокиров")) {
             sendMessage(chatId, "BANK_CARD_STOP_LIST", MessageType.BUTTON);
         }
         if (text.contains("баланс")) {
@@ -184,7 +193,15 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (text.contains("сбербилет")) {
             sendMessage(chatId, "BANK_CARD_SBER_BILET", MessageType.BUTTON);
         }
-
+        if (text.contains("меню")) {
+            sendMessage(chatId, "/start", MessageType.COMMAND);
+        }
+        if (text.contains("такси")) {
+            sendMessage(chatId, "/taxi", MessageType.COMMAND);
+        }
+        if (text.contains("разрешен") || text.contains("госпошлин")) {
+            sendMessage(chatId, "WHO_CAN_WORK_IN_TAXI", MessageType.BUTTON);
+        }
         // Если нечего выше не сработало, отправляем сообщение админу - ИД пользователя и текст сообщения.
         sendMessage(adminId, chatId + " написал - " + text, MessageType.OTHER);
     }
@@ -194,6 +211,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         // Создаём отправляемое сообщение.
         SendMessage sendMessage = SendMessage.builder()
                 .disableWebPagePreview(true)            // Отключаем веб представление сайтов.
+                .parseMode(ParseMode.HTML)              // Ссылки по тексту - href.
                 .chatId(chatId.toString())              // кому отправляем сообщение (ИД чата).
                 .text(EmojiParser.parseToUnicode(text)) // текст сообщения (с поддержкой смайлов).
                 .build();
@@ -216,33 +234,33 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    // Редактируем ранее отправленное сообщение.
+    void editMessage(Integer messageId, Long chatId, String data) {
+        // Редактируем сообщение.
+        EditMessageText sendMessage = EditMessageText.builder()
+                .messageId(messageId)
+                .disableWebPagePreview(true)
+                .parseMode(ParseMode.HTML)
+                .chatId(chatId.toString())
+                .text(EmojiParser.parseToUnicode(messageService.getMessage(data)))
+                .replyMarkup(markupService.getMarkup(data))
+                .build();
+        // Изменяем сообщение.
+        try {
+            execute(sendMessage);
+            log.info("Изменено сообщение => " + sendMessage.getText());
+        } catch (TelegramApiException e) {
+            log.info("Ошибка изменения сообщения => " + e.getMessage());
+        }
+    }
+
     //  Отправка новости.
     void sendNews(Long chatId, News news) {
-        // Клавиатура
-        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-        // Ряды клавиатуры
-        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
-        // 1 ряд клавиатуры
-        List<InlineKeyboardButton> rowInLine1 = new ArrayList<>();
-        // Кнопка Web - Читать полностью (страница новости).
-        var newsLink = new InlineKeyboardButton();
-        var newsWeb = new WebAppInfo(news.getLink());
-        System.out.println(newsWeb);
-        newsLink.setText("Читать полностью");
-        newsLink.setWebApp(newsWeb);
-
-        rowInLine1.add(newsLink);
-        rowsInLine.add(rowInLine1);
-        markup.setKeyboard(rowsInLine);
-
-
         // Отправляем новость - дата публикации + заголовок + кнопка (ссылка на полное содержании новости).
         SendMessage sendMessage = SendMessage.builder()
                 .chatId(chatId.toString())
                 .text(news.getDate() + "\n" + news.getTitle() + "\n" + news.getLink())
-                //.replyMarkup(markup)
                 .build();
-
         try {
             execute(sendMessage);
             log.info("\nОтправлена новость => " + sendMessage.getText());
