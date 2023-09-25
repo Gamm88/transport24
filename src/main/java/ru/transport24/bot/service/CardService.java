@@ -53,7 +53,7 @@ public class CardService {
         user.addCard(card);
         // Обновляем пользователя в БД.
         userRepository.save(user);
-        log.info("Добавлена карта: " + card);
+        log.info("\nДобавлена карта: " + card);
         return card.getCardType().getInRussian() + " №" + card.getCardNumber() + " добавлена!";
     }
 

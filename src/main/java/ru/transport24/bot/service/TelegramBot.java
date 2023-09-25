@@ -24,6 +24,7 @@ import java.util.*;
 @Service
 public class TelegramBot extends TelegramLongPollingBot {
     final Long adminId;
+    final ChatGPT chatGPT;
     final BotConfig botConfig;
     final UserService userService;
     final CardService cardService;
@@ -31,15 +32,18 @@ public class TelegramBot extends TelegramLongPollingBot {
     final MarkupService markupService;
     final MessageService messageService;
 
+
     public TelegramBot(BotConfig botConfig, NewsService newsService, UserService userService,
-                       MessageService messageService, MarkupService markupService, CardService cardService) {
+                       MessageService messageService, MarkupService markupService, CardService cardService, ChatGPT chatGPT) {
         super(botConfig.getBotToken());
+        this.chatGPT = chatGPT;
         this.botConfig = botConfig;
         this.userService = userService;
         this.cardService = cardService;
         this.newsService = newsService;
         this.markupService = markupService;
         this.messageService = messageService;
+
 
         // Создаём меню бота
         List<BotCommand> listOfCommands = new ArrayList<>();
@@ -57,7 +61,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
-            log.error("Ошибка " + e.getMessage());
+            log.error("\nОшибка создании меню " + e.getMessage());
             throw new RuntimeException(e);
         }
         adminId = botConfig.getBotAdmin();
@@ -72,32 +76,55 @@ public class TelegramBot extends TelegramLongPollingBot {
     // Метод вызывается всякий раз, когда будет доступно новое обновление (входящее сообщение у бота).
     @Override
     public void onUpdateReceived(Update update) {
-        System.out.println(update);
+        log.info("\nНовое обновление => " + update);
         // Обработка сообщений типа - CallbackQuery (кнопка).
         if (update.hasCallbackQuery()) {
             // Определяем кнопку.
             String data = update.getCallbackQuery().getData();
-            log.info("Нажата кнопка => " + data);
+            log.info("\nНажата кнопка => " + data);
             // Определяем ИД сообщения.
             Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
             // ИД чата (пользователя), где пришло сообщение.
             Long chatId = update.getCallbackQuery().getMessage().getChat().getId();
             // Действия.
             // Карты добавленные пользователем.
-            if ("USER_CARDS".equals(data)) {
+            if (data.equals("USER_CARDS")) {
                 sendMessage(chatId, cardService.getUserCards(chatId), MessageType.OTHER);
                 return;
             }
+            if (data.equals("TRACK_ADD_CARD")) {
+                sendMessage(chatId, data, MessageType.BUTTON);
+                return;
+            }
             // Ответное сообщение
-            //sendMessage(chatId, data, MessageType.BUTTON);
             editMessage(messageId, chatId, data);
             return;
         }
 
-        // Входящее сообщение.
-        Message incomingMessage = update.getMessage();
-        // ИД чата (пользователя), где пришло сообщение.
-        Long chatId = incomingMessage.getChat().getId();
+        // Обрабатываем входящее сообщение.
+        Message incomingMessage;
+        Long chatId;
+        // Пытаемся получить сообщение.
+        try {
+            // Содержание сообщения.
+            incomingMessage = update.getMessage();
+            // ИД чата (пользователя), где пришло сообщение.
+            chatId = incomingMessage.getChat().getId();
+        } catch (NullPointerException e) {
+            // Если нет сообщения возможно блокировка или разблокировка бота.
+            if (update.getMyChatMember() != null && update.getMyChatMember().getNewChatMember().getStatus().equals("kicked")) {
+                log.info("\nПользователь заблокировал бота");
+                return;
+            } else if (update.getMyChatMember() != null && update.getMyChatMember().getNewChatMember().getStatus().equals("member")) {
+                log.info("\nПользователь разблокировал бота");
+                return;
+                // Иначе неизвестное обновление.
+            } else {
+                log.info("\nНеизвестное обновление - " + update);
+                sendMessage(adminId, "Неизвестное обновление - " + update, MessageType.OTHER);
+                return;
+            }
+        }
 
         // Текст сообщения.
         String text;
@@ -106,22 +133,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         } else {
             text = incomingMessage.getCaption().toLowerCase(); // если текст с фото
         }
-        log.info("Новое сообщение => " + text);
-
-        // При старте бота, регистрируем пользователя и сообщаем админу.
-        if (text.equals("/start")) {
-            userService.addUser(update);
-            User user = userService.getUser(chatId);
-            if (user != null) {
-                String newUser = "Новый пользователь => ID - " + user.getId() +
-                        ", UserName - " + user.getUserName() +
-                        ", FirstName - " + user.getFirstName() +
-                        ", LastName - " + user.getLastName();
-                sendMessage(adminId, newUser, MessageType.OTHER);
-            } else {
-                sendMessage(adminId, "Ошибка добавления пользователя с ID " + chatId, MessageType.OTHER);
-            }
-        }
+        log.info("\nПришло сообщение => " + text);
 
         // Обработка команд администратора (ИД чата = ИД администратора).
         if (chatId.equals(adminId)) {
@@ -137,7 +149,21 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         // Обработка команд.
         if (incomingMessage.isCommand()) {
-            if (text.equals("/news")) {
+            // При старте бота, регистрируем пользователя и сообщаем админу.
+            if (text.equals("/start")) {
+                userService.addUser(update);
+                User user = userService.getUser(chatId);
+                if (user != null) {
+                    String newUser = "Новый пользователь => ID - " + user.getId() +
+                            ", UserName - " + user.getUserName() +
+                            ", FirstName - " + user.getFirstName() +
+                            ", LastName - " + user.getLastName();
+                    sendMessage(adminId, newUser, MessageType.OTHER);
+                } else {
+                    sendMessage(adminId, "Ошибка добавления пользователя с ID " + chatId, MessageType.OTHER);
+                }
+                // Отправка новостей.
+            } else if (text.equals("/news")) {
                 for (long i = 1; i < 6; i++) {
                     News news = newsService.getNews(6 - i);
                     sendNews(chatId, news);
@@ -148,7 +174,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
         // Добавление карты для контроля (текст содержит ключевое слово - добавить).
-        if (text.toLowerCase().contains("добавить")) {
+        if (text.toLowerCase().contains("добавит")) {
+            // Если в сообщении нет цифры отправляет сообщение с тем как добавить карту.
+            if (text.replaceAll("\\D+", "").length() < 3) {
+                sendMessage(chatId, "TRACK_ADD_CARD", MessageType.BUTTON);
+                return;
+            }
+            // Если есть цифры выполняем метод добавления карты.
             try {
                 sendMessage(chatId, cardService.addCard(chatId, text, update), MessageType.OTHER);
             } catch (ValidatorExceptions e) {
@@ -158,7 +190,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
         // Отмена контроля карты (текст содержит ключевое слово - удалить).
-        if (text.toLowerCase().contains("удалить")) {
+        if (text.toLowerCase().contains("удалит")) {
+            // Если в сообщении нет цифры отправляет сообщение с тем как добавить карту.
+            if (text.replaceAll("\\D+", "").length() < 3) {
+                sendMessage(chatId, "TRACK_DELETE_CARD", MessageType.BUTTON);
+                return;
+            }
             sendMessage(chatId, cardService.deleteCard(chatId, text), MessageType.OTHER);
             return;
         }
@@ -184,26 +221,46 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
         // Подбор ответов на текст в чате.
-        if (text.contains("стоп") || text.contains("черн") || text.contains("чёрн") || text.contains("блокиров")) {
+        if (text.contains("отзыв")) {
+            sendMessage(chatId, "/feedback", MessageType.COMMAND);
+            return;
+        } else if (text.contains("вывес") || text.contains("снять")) {
+            sendMessage(chatId, "BANK_CARD_STOP_LIST_REMOVE", MessageType.BUTTON);
+            return;
+        } else if (text.contains("стоп") || text.contains("черн") || text.contains("чёрн") || text.contains("блокиров") || text.contains("не могу оплатить")) {
             sendMessage(chatId, "BANK_CARD_STOP_LIST", MessageType.BUTTON);
-        }
-        if (text.contains("баланс")) {
+            return;
+        } else if (text.contains("баланс")) {
             sendMessage(chatId, "BALANCE", MessageType.BUTTON);
-        }
-        if (text.contains("сбербилет")) {
+            return;
+        } else if (text.contains("сбербилет")) {
             sendMessage(chatId, "BANK_CARD_SBER_BILET", MessageType.BUTTON);
-        }
-        if (text.contains("меню")) {
+            return;
+        } else if (text.contains("меню")) {
             sendMessage(chatId, "/start", MessageType.COMMAND);
-        }
-        if (text.contains("такси")) {
+            return;
+        } else if (text.contains("такси")) {
             sendMessage(chatId, "/taxi", MessageType.COMMAND);
-        }
-        if (text.contains("разрешен") || text.contains("госпошлин")) {
+            return;
+        } else if (text.contains("разрешен") || text.contains("госпошлин")) {
             sendMessage(chatId, "WHO_CAN_WORK_IN_TAXI", MessageType.BUTTON);
+            return;
+        } else if (text.contains("вернуть")) {
+            sendMessage(chatId, "BANK_CARD_REFUND", MessageType.BUTTON);
+            return;
+        } else if (text.contains("сайт") || text.contains("ссылка") && text.contains("не") && text.contains("работ") || text.contains("открыв")) {
+            sendMessage(chatId, "/news", MessageType.COMMAND);
+            return;
+        } else if (text.contains("расписание") || text.contains("какая маршрутка") || text.contains("какой автобус")) {
+            sendMessage(chatId, "/schedule", MessageType.COMMAND);
+            return;
         }
-        // Если нечего выше не сработало, отправляем сообщение админу - ИД пользователя и текст сообщения.
-        sendMessage(adminId, chatId + " написал - " + text, MessageType.OTHER);
+
+        // Если нечего выше не сработало, ответит искусственный интеллект.
+        String answerChatGPT = chatGPT.askChatGPT(text);
+        sendMessage(chatId, answerChatGPT, MessageType.OTHER);
+        // Отправляем сообщение админу.
+        sendMessage(adminId, chatId + " написал:\n" + text + "\nОтвет GPT:\n" + answerChatGPT, MessageType.OTHER);
     }
 
     // Отправка сообщения.
@@ -248,9 +305,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         // Изменяем сообщение.
         try {
             execute(sendMessage);
-            log.info("Изменено сообщение => " + sendMessage.getText());
+            log.info("\nИзменено сообщение => " + sendMessage.getText());
         } catch (TelegramApiException e) {
-            log.info("Ошибка изменения сообщения => " + e.getMessage());
+            log.info("\nОшибка изменения сообщения => " + e.getMessage() +
+                    "\nВходные данные: => " + data +
+                    "\nСообщение => " + sendMessage);
         }
     }
 

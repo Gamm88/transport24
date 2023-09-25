@@ -68,6 +68,8 @@ public class MessageService {
             \nГородские маршруты онлайн:
             https://mu-kgt.ru/informing/wap/marsh/
             Справочная Красноярскгортранс: 8-391-223-55-56
+            \nВсе маршруты Красноярского края на транспортно портале:
+            http://mintrans24.ru/
             \nРасписание дачных маршрутов в Красноярске на 2023 год:
             https://www.krtu.ru/passazhiram/dachnoe-raspisanie/""";
     private final String ONLINE = """
