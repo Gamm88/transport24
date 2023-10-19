@@ -32,7 +32,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     final MarkupService markupService;
     final MessageService messageService;
 
-
     public TelegramBot(BotConfig botConfig, NewsService newsService, UserService userService,
                        MessageService messageService, MarkupService markupService, CardService cardService, ChatGPT chatGPT) {
         super(botConfig.getBotToken());
@@ -43,7 +42,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         this.newsService = newsService;
         this.markupService = markupService;
         this.messageService = messageService;
-
 
         // Создаём меню бота
         List<BotCommand> listOfCommands = new ArrayList<>();
@@ -131,7 +129,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (incomingMessage.getText() != null) {
             text = incomingMessage.getText().toLowerCase();    // если просто текст
         } else {
-            text = incomingMessage.getCaption().toLowerCase(); // если текст с фото
+            if (incomingMessage.getCaption() != null) {
+                text = incomingMessage.getCaption().toLowerCase(); // если текст с фото
+            } else {
+                return;
+            }
         }
         log.info("\nПришло сообщение => " + text);
 
@@ -220,11 +222,13 @@ public class TelegramBot extends TelegramLongPollingBot {
             return;
         }
 
+        sendMessage(adminId, chatId + " написал:\n" + text, MessageType.OTHER);
+
         // Подбор ответов на текст в чате.
         if (text.contains("отзыв")) {
             sendMessage(chatId, "/feedback", MessageType.COMMAND);
             return;
-        } else if (text.contains("вывес") || text.contains("снять")) {
+        } else if (text.contains("вывес") || text.contains("снять") || text.contains("оплатить") && text.contains("дол")) {
             sendMessage(chatId, "BANK_CARD_STOP_LIST_REMOVE", MessageType.BUTTON);
             return;
         } else if (text.contains("стоп") || text.contains("черн") || text.contains("чёрн") || text.contains("блокиров") || text.contains("не могу оплатить")) {
@@ -245,10 +249,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         } else if (text.contains("разрешен") || text.contains("госпошлин")) {
             sendMessage(chatId, "WHO_CAN_WORK_IN_TAXI", MessageType.BUTTON);
             return;
-        } else if (text.contains("вернуть")) {
+        } else if (text.contains("социальн") || text.contains("базовы")) {
+            sendMessage(chatId, "SOCIAL_CARD_INFO", MessageType.BUTTON);
+            return;
+        } else if (text.contains("вернуть") || text.contains("возврат")) {
             sendMessage(chatId, "BANK_CARD_REFUND", MessageType.BUTTON);
             return;
-        } else if (text.contains("сайт") || text.contains("ссылка") && text.contains("не") && text.contains("работ") || text.contains("открыв")) {
+        } else if (text.contains("сайт") || text.contains("ссылка") && text.contains("не") && (text.contains("работ") || text.contains("открыв"))) {
             sendMessage(chatId, "/news", MessageType.COMMAND);
             return;
         } else if (text.contains("расписание") || text.contains("какая маршрутка") || text.contains("какой автобус")) {
@@ -257,10 +264,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
         // Если нечего выше не сработало, ответит искусственный интеллект.
-        String answerChatGPT = chatGPT.askChatGPT(text);
-        sendMessage(chatId, answerChatGPT, MessageType.OTHER);
+        // String answerChatGPT = chatGPT.askChatGPT2(text);
+        // sendMessage(chatId, answerChatGPT, MessageType.OTHER);
         // Отправляем сообщение админу.
-        sendMessage(adminId, chatId + " написал:\n" + text + "\nОтвет GPT:\n" + answerChatGPT, MessageType.OTHER);
+        // sendMessage(adminId, chatId + " написал:\n" + text + "\nОтвет GPT:\n" + answerChatGPT, MessageType.OTHER);
     }
 
     // Отправка сообщения.

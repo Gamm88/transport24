@@ -5,10 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.transport24.bot.config.ChatGPTConfig;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -51,6 +48,47 @@ public class ChatGPT {
                     .replaceAll("\\\\\"", " ")
                     .replaceAll("\\\\n", "\n");
 
+        } catch (IOException e) {
+            log.info("\nОшибка получения ответа от chatGPT => " + e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    String askChatGPT2(String message) {
+        try {
+            // URL и заголовки запроса
+            URL url = new URL(chatGPTConfig.getGPTUrl());
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Authorization", "Bearer " + chatGPTConfig.getGPTApiKey());
+            connection.setRequestProperty("Content-Type", "application/json");
+
+            // Тело запроса
+            String requestBody = String.format("{\"model\": \"gpt-3.5-turbo\", \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"%s\"}]}", message);
+            connection.setDoOutput(true);
+            OutputStream os = connection.getOutputStream();
+            os.write(requestBody.getBytes());
+            os.flush();
+
+            // Получение ответа
+            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String inputLine;
+            StringBuilder responseContent = new StringBuilder();
+
+            while ((inputLine = in.readLine()) != null) {
+                responseContent.append(inputLine);
+            }
+            in.close();
+
+            // Вывод ответа
+            return  ("Вам отвечает искусственный интеллект:\n"
+                    + responseContent.toString()
+                    .replaceAll("\\\\\"", " ")
+                    .replaceAll("\\\\n", "\n")
+                    .replaceAll(" {3}", " ")
+                    .replaceAll(" {2}", " ")
+                    .split("\"content\": \"")[1]
+                    .split("\" },")[0]);
         } catch (IOException e) {
             log.info("\nОшибка получения ответа от chatGPT => " + e);
             throw new RuntimeException(e);

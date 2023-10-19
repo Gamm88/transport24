@@ -122,7 +122,7 @@ public class CardService {
                         "\nwww.krasinform.ru/faq" +
                         "\n" +
                         "\nЕсли у вас не открывается сайт с личным кабинетом пассажира:" +
-                        "\nwww.sberbank.ru/ru/certificates";
+                        "\nwww.gosuslugi.ru/crt";
                 // Если задолженность есть.
             } else {
                 balance = "Банковская карта №" + cardNumber + " находится в стоп-листе," +
@@ -135,7 +135,7 @@ public class CardService {
                         "\nwww.krasinform.ru/faq" +
                         "\n" +
                         "\nЕсли у вас не открывается сайт с личным кабинетом пассажира:" +
-                        "\nwww.sberbank.ru/ru/certificates";
+                        "\nwww.gosuslugi.ru/crt";
             }
         } else if (card.getCardType() == CardType.TRANSPORT) {
             int debt = card.getBalance();
@@ -197,7 +197,7 @@ public class CardService {
     private void setBankCardBalance(Card card) {
         // Создаём клиент для отправки запросов, таймаут подключения = 10 сек, так как сбербанк задумчивый.
         OkHttpClient client = new OkHttpClient.Builder()
-                .connectTimeout(10000, TimeUnit.MILLISECONDS)
+                .connectTimeout(300000, TimeUnit.MILLISECONDS)
                 .build();
         // Выполняем POST запрос на сайт сбербанка.
         MediaType mediaType = MediaType.parse("application/json");
@@ -215,7 +215,7 @@ public class CardService {
             card.setBalance(Integer.parseInt(responseBody.entrySet().iterator().next().getValue()) / 100);
         } catch (IOException e) {
             log.info("Ошибка подключения к " + request.url() + ", ошибка: " + e);
-            throw new ValidatorExceptions("Не удалось проверить баланс, попробуйте ещё раз через минуту!");
+            throw new ValidatorExceptions("Не удалось проверить баланс карты с №" + card.getCardNumber() + "проверьте номер или попробуйте ещё раз через минуту!");
         }
     }
 
@@ -234,7 +234,7 @@ public class CardService {
             HashMap<String, String> responseBody = new ObjectMapper().readValue(response.body().string(), HashMap.class);
             // Если ошибка в номере карты.
             if (responseBody.get("error") != null) {
-                throw new ValidatorExceptions("Неизвестный тип карты, проверьте номер!");
+                throw new ValidatorExceptions("Не удалось проверить баланс карты с №" + card.getCardNumber() + "проверьте номер или попробуйте ещё раз через минуту!");
             }
             // Устанавливаем баланс транспортной карты.
             card.setBalance(Integer.valueOf(responseBody.get("balance").split("\\.")[0]));
@@ -259,7 +259,7 @@ public class CardService {
             HashMap<String, String> responseBody = new ObjectMapper().readValue(response.body().string(), HashMap.class);
             // Если ошибка в номере карты.
             if (responseBody.get("error") != null) {
-                throw new ValidatorExceptions("Неизвестный тип карты, проверьте номер!");
+                throw new ValidatorExceptions("Не удалось проверить баланс карты с №" + card.getCardNumber() + "проверьте номер или попробуйте ещё раз через минуту!");
             }
             // Устанавливаем баланс базовых и дополнительных поездок социальной карты.
             card.setBaseTrips(Integer.valueOf(responseBody.get("left_base_trips")));

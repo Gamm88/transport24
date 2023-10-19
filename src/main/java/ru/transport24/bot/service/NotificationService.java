@@ -1,8 +1,10 @@
 package ru.transport24.bot.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import ru.transport24.bot.exception.ValidatorExceptions;
 import ru.transport24.bot.model.Card;
 import ru.transport24.bot.model.CardType;
 import ru.transport24.bot.model.MessageType;
@@ -15,6 +17,7 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -32,8 +35,9 @@ public class NotificationService {
                 try {
                     startNotification();
                     newsService.parseNews();
-                } catch (TelegramApiException | IOException e) {
-                    throw new RuntimeException(e);
+                } catch (ValidatorExceptions | TelegramApiException | IOException e) {
+                    log.info("Ошибка в работе Timer! " + e);
+                    telegramBot.sendMessage(1709421744L, "Ошибка в работе Timer! " + e, MessageType.OTHER);
                 }
             }
         };
@@ -45,13 +49,15 @@ public class NotificationService {
         // Создаём таймер - задание (метод task), время начала (today), повторного срабатывания (через 12 часов)
         Timer timer = new Timer("Timer");
         timer.schedule(task, today.getTime(), 43200000);
+        log.info("Timer запущен!");
+        telegramBot.sendMessage(1709421744L, "Timer запущен!", MessageType.OTHER);
     }
 
     // Метод отправки уведомлений пользователям если их карта в стоп-листе, мало средств, поездок.
     private void startNotification() throws IOException, TelegramApiException {
         // Список пользователей у кого включены уведомления.
         List<User> userList = userRepository.findAllByNotificationIsTrue();
-        // Для каждого пользователя собираем список.
+        // Для каждого пользователя из списка.
         for (User user : userList) {
             // Получаем ИД пользователя.
             Long userId = user.getId();
@@ -65,7 +71,13 @@ public class NotificationService {
                     String cardNumber = card.getCardNumber();
                     // Если карта банковская.
                     if (card.getCardType() == CardType.BANKING) {
-                        int balance = cardService.getCardWithBalance(cardNumber).getBalance();
+                        int balance = 0;
+                        try {
+                            balance = cardService.getCardWithBalance(cardNumber).getBalance();
+                        } catch (ValidatorExceptions e) {
+                            log.info("Ошибка проверки баланса карты: " + e);
+                            telegramBot.sendMessage(1709421744L, "Ошибка проверки баланса карты: " + e, MessageType.OTHER);
+                        }
                         if (balance > 0) {
                             telegramBot.sendMessage(userId, "Банковская карта №" + cardNumber + " попала в стоп-лист," +
                                     " задолженность составляет " + balance + " руб.", MessageType.OTHER);
@@ -73,16 +85,28 @@ public class NotificationService {
                     }
                     // Если карта транспортная.
                     if (card.getCardType() == CardType.TRANSPORT) {
-                        int balance = cardService.getCardWithBalance(cardNumber).getBalance();
+                        int balance = 100;
+                        try {
+                            balance = cardService.getCardWithBalance(cardNumber).getBalance();
+                        } catch (ValidatorExceptions e) {
+                            log.info("Ошибка проверки баланса карты: " + e);
+                            telegramBot.sendMessage(1709421744L, "Ошибка проверки баланса карты: " + e, MessageType.OTHER);
+                        }
                         if (balance < 100) {
                             telegramBot.sendMessage(userId, "На транспортной карте №" + cardNumber +
                                     " осталось " + balance + " руб.", MessageType.OTHER);
                         }
                     }
-                    // Если карта Социальная.
+                    // Если карта социальная.
                     if (card.getCardType() == CardType.SOCIAL) {
-                        int balance = cardService.getCardWithBalance(cardNumber).getBaseTrips()
-                                + cardService.getCardWithBalance(cardNumber).getDopTrips();
+                        int balance = 3;
+                        try {
+                            balance = cardService.getCardWithBalance(cardNumber).getBaseTrips()
+                                    + cardService.getCardWithBalance(cardNumber).getDopTrips();
+                        } catch (ValidatorExceptions e) {
+                            log.info("Ошибка проверки баланса карты: " + e);
+                            telegramBot.sendMessage(1709421744L, "Ошибка проверки баланса карты: " + e, MessageType.OTHER);
+                        }
                         if (balance < 3) {
                             telegramBot.sendMessage(userId, "На социальной карте №" + cardNumber +
                                     " осталось " + balance + " поездок.", MessageType.OTHER);
@@ -92,6 +116,4 @@ public class NotificationService {
             }
         }
     }
-
-
 }

@@ -15,7 +15,6 @@ public class ChatGPTConfig {
     @Value("${GPT.apiKey}")
     String GPTApiKey;
 
-    // Администратор бота.
     @Value("${GPT.model}")
     String GPTModel;
 }

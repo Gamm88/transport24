@@ -235,7 +235,7 @@ public class MessageService {
             case "/online" -> text = ONLINE;
             case "/taxi", "TAXI_BACK" -> text = TAXI;
             case "/track", "TRACK_START" -> text = TRACK_START;
-            case "/bcard", "BANK_CARD_BACK" -> text = BANK_CARD_START;
+            case "/bcard", "BANK_CARD_BACK", "BANK_CARD_INFO" -> text = BANK_CARD_START;
             case "/tcard" -> text = TRANSPORT_CARD_START;
             case "/scard" -> text = SOCIAL_CARD_START;
             case "/qrcod" -> text = QRCOD;
