@@ -19,7 +19,7 @@ public class BotInitializer {
     final TelegramBot telegramBot;
     final NotificationService notificationService;
 
-    // Регистрация и запуск бота
+    // Регистрация и запуск бота, после запуска приложения.
     @EventListener({ContextRefreshedEvent.class})
     public void init() throws TelegramApiException {
         TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
@@ -30,7 +30,7 @@ public class BotInitializer {
         }
     }
 
-    // Запуск методов, после запуска приложения.
+    // Запуск дополнительных методов, после запуска приложения.
     @EventListener(ApplicationReadyEvent.class)
     public void runAfterStartup() {
         notificationService.Timer(); // метод отправки уведомлений по расписанию (ежедневно в 22:00 и 10:00)

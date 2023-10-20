@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import ru.transport24.bot.repository.UserRepository;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
-import java.util.List;
 import java.sql.Timestamp;
 
 @Slf4j
@@ -39,21 +38,14 @@ public class UserService {
     }
 
     // Удаление пользователя.
-    public String deleteUser(Long chatId) {
+    public void deleteUser(Long chatId) {
         // Если пользователь зарегистрирован, удаляем его из БД.
         if (getUser(chatId) != null) {
             userRepository.deleteById(chatId);
             log.info("Удалён пользователь с ИД: " + chatId);
-            return "Регистрация удалена!";
         } else {
-            // Если не зарегистрирован, то сообщаем об этом и нечего не делаем.
-            return "Удаление регистрации невозможно,\nВы не зарегистрированы!";
+            log.info("Пользователь с ИД: " + chatId + " не найден!");
         }
-    }
-
-    // Поиск всех пользователей, которые подписаны на рассылку.
-    public List<User> getUsersByNotificationIsTrue() {
-        return userRepository.findAllByNotificationIsTrue();
     }
 
     // Поиск пользователя по ИД.

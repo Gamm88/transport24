@@ -215,7 +215,7 @@ public class CardService {
             card.setBalance(Integer.parseInt(responseBody.entrySet().iterator().next().getValue()) / 100);
         } catch (IOException e) {
             log.info("Ошибка подключения к " + request.url() + ", ошибка: " + e);
-            throw new ValidatorExceptions("Не удалось проверить баланс карты с №" + card.getCardNumber() + "проверьте номер или попробуйте ещё раз через минуту!");
+            throw new ValidatorExceptions("Не удалось проверить баланс карты " + card.getCardNumber() + " проверьте номер или попробуйте ещё раз через минуту!");
         }
     }
 
@@ -234,7 +234,7 @@ public class CardService {
             HashMap<String, String> responseBody = new ObjectMapper().readValue(response.body().string(), HashMap.class);
             // Если ошибка в номере карты.
             if (responseBody.get("error") != null) {
-                throw new ValidatorExceptions("Не удалось проверить баланс карты с №" + card.getCardNumber() + "проверьте номер или попробуйте ещё раз через минуту!");
+                throw new ValidatorExceptions("Не удалось проверить баланс карты " + card.getCardNumber() + " проверьте номер или попробуйте ещё раз через минуту!");
             }
             // Устанавливаем баланс транспортной карты.
             card.setBalance(Integer.valueOf(responseBody.get("balance").split("\\.")[0]));
@@ -259,7 +259,7 @@ public class CardService {
             HashMap<String, String> responseBody = new ObjectMapper().readValue(response.body().string(), HashMap.class);
             // Если ошибка в номере карты.
             if (responseBody.get("error") != null) {
-                throw new ValidatorExceptions("Не удалось проверить баланс карты с №" + card.getCardNumber() + "проверьте номер или попробуйте ещё раз через минуту!");
+                throw new ValidatorExceptions("Не удалось проверить баланс карты " + card.getCardNumber() + " проверьте номер или попробуйте ещё раз через минуту!");
             }
             // Устанавливаем баланс базовых и дополнительных поездок социальной карты.
             card.setBaseTrips(Integer.valueOf(responseBody.get("left_base_trips")));

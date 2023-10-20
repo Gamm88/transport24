@@ -91,6 +91,7 @@ public class NotificationService {
                         } catch (ValidatorExceptions e) {
                             log.info("Ошибка проверки баланса карты: " + e);
                             telegramBot.sendMessage(1709421744L, "Ошибка проверки баланса карты: " + e, MessageType.OTHER);
+                            cardService.deleteCard(userId, cardNumber);
                         }
                         if (balance < 100) {
                             telegramBot.sendMessage(userId, "На транспортной карте №" + cardNumber +

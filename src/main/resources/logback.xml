@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!-- Запись логов -->
 <configuration>
     <!-- Где храним логи -->
@@ -20,6 +21,7 @@
         <encoder>
             <pattern>%d %p %c{1} [%t] %m%n</pattern>
         </encoder>
+
     </appender>
     <!-- Уровень логов которые будем записывать -->
     <logger name="ru.transport24.bot" level="debug" additivity="false">

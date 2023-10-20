@@ -24,7 +24,6 @@ import java.util.*;
 @Service
 public class TelegramBot extends TelegramLongPollingBot {
     final Long adminId;
-    final ChatGPT chatGPT;
     final BotConfig botConfig;
     final UserService userService;
     final CardService cardService;
@@ -33,9 +32,8 @@ public class TelegramBot extends TelegramLongPollingBot {
     final MessageService messageService;
 
     public TelegramBot(BotConfig botConfig, NewsService newsService, UserService userService,
-                       MessageService messageService, MarkupService markupService, CardService cardService, ChatGPT chatGPT) {
+                       MessageService messageService, MarkupService markupService, CardService cardService) {
         super(botConfig.getBotToken());
-        this.chatGPT = chatGPT;
         this.botConfig = botConfig;
         this.userService = userService;
         this.cardService = cardService;
@@ -75,6 +73,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         log.info("\nНовое обновление => " + update);
+
         // Обработка сообщений типа - CallbackQuery (кнопка).
         if (update.hasCallbackQuery()) {
             // Определяем кнопку.
@@ -127,7 +126,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         // Текст сообщения.
         String text;
         if (incomingMessage.getText() != null) {
-            text = incomingMessage.getText().toLowerCase();    // если просто текст
+            text = incomingMessage.getText().toLowerCase();        // если просто текст
         } else {
             if (incomingMessage.getCaption() != null) {
                 text = incomingMessage.getCaption().toLowerCase(); // если текст с фото
@@ -161,8 +160,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                             ", FirstName - " + user.getFirstName() +
                             ", LastName - " + user.getLastName();
                     sendMessage(adminId, newUser, MessageType.OTHER);
-                } else {
-                    sendMessage(adminId, "Ошибка добавления пользователя с ID " + chatId, MessageType.OTHER);
                 }
                 // Отправка новостей.
             } else if (text.equals("/news")) {
@@ -177,8 +174,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         // Добавление карты для контроля (текст содержит ключевое слово - добавить).
         if (text.toLowerCase().contains("добавит")) {
-            // Если в сообщении нет цифры отправляет сообщение с тем как добавить карту.
-            if (text.replaceAll("\\D+", "").length() < 3) {
+            // Если в сообщении мало цифры отправляет сообщение с тем как добавить карту.
+            if (text.replaceAll("\\D+", "").length() < 10) {
                 sendMessage(chatId, "TRACK_ADD_CARD", MessageType.BUTTON);
                 return;
             }
@@ -193,8 +190,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         // Отмена контроля карты (текст содержит ключевое слово - удалить).
         if (text.toLowerCase().contains("удалит")) {
-            // Если в сообщении нет цифры отправляет сообщение с тем как добавить карту.
-            if (text.replaceAll("\\D+", "").length() < 3) {
+            // Если в сообщении мало цифры отправляет сообщение с тем как добавить карту.
+            if (text.replaceAll("\\D+", "").length() < 10) {
                 sendMessage(chatId, "TRACK_DELETE_CARD", MessageType.BUTTON);
                 return;
             }
@@ -212,8 +209,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         // Возможно пользователь хочет узнать баланс карты - Банковской, Транспортной, Социальной.
         // Получаем номер карты из сообщения (удаляем все кроме цифр).
         String cardNumber = update.getMessage().getText().replaceAll("\\D+", "");
-        // Если цифры есть и их больше 3, то выполняем проверку баланса карты или нахождение в стоп-листе.
-        if (cardNumber.length() > 3) {
+        // Если цифры есть и их больше 10, то выполняем проверку баланса карты или нахождение в стоп-листе.
+        if (cardNumber.length() > 10) {
             try {
                 sendMessage(chatId, cardService.cardBalance(cardNumber), MessageType.OTHER);
             } catch (ValidatorExceptions e) {
@@ -222,52 +219,35 @@ public class TelegramBot extends TelegramLongPollingBot {
             return;
         }
 
+        // Нестандартные сообщения
         sendMessage(adminId, chatId + " написал:\n" + text, MessageType.OTHER);
 
-        // Подбор ответов на текст в чате.
+        // Подбор ответов на нестандартные сообщения.
         if (text.contains("отзыв")) {
             sendMessage(chatId, "/feedback", MessageType.COMMAND);
-            return;
         } else if (text.contains("вывес") || text.contains("снять") || text.contains("оплатить") && text.contains("дол")) {
             sendMessage(chatId, "BANK_CARD_STOP_LIST_REMOVE", MessageType.BUTTON);
-            return;
         } else if (text.contains("стоп") || text.contains("черн") || text.contains("чёрн") || text.contains("блокиров") || text.contains("не могу оплатить")) {
             sendMessage(chatId, "BANK_CARD_STOP_LIST", MessageType.BUTTON);
-            return;
         } else if (text.contains("баланс")) {
             sendMessage(chatId, "BALANCE", MessageType.BUTTON);
-            return;
         } else if (text.contains("сбербилет")) {
             sendMessage(chatId, "BANK_CARD_SBER_BILET", MessageType.BUTTON);
-            return;
         } else if (text.contains("меню")) {
             sendMessage(chatId, "/start", MessageType.COMMAND);
-            return;
         } else if (text.contains("такси")) {
             sendMessage(chatId, "/taxi", MessageType.COMMAND);
-            return;
         } else if (text.contains("разрешен") || text.contains("госпошлин")) {
             sendMessage(chatId, "WHO_CAN_WORK_IN_TAXI", MessageType.BUTTON);
-            return;
         } else if (text.contains("социальн") || text.contains("базовы")) {
             sendMessage(chatId, "SOCIAL_CARD_INFO", MessageType.BUTTON);
-            return;
         } else if (text.contains("вернуть") || text.contains("возврат")) {
             sendMessage(chatId, "BANK_CARD_REFUND", MessageType.BUTTON);
-            return;
         } else if (text.contains("сайт") || text.contains("ссылка") && text.contains("не") && (text.contains("работ") || text.contains("открыв"))) {
             sendMessage(chatId, "/news", MessageType.COMMAND);
-            return;
         } else if (text.contains("расписание") || text.contains("какая маршрутка") || text.contains("какой автобус")) {
             sendMessage(chatId, "/schedule", MessageType.COMMAND);
-            return;
         }
-
-        // Если нечего выше не сработало, ответит искусственный интеллект.
-        // String answerChatGPT = chatGPT.askChatGPT2(text);
-        // sendMessage(chatId, answerChatGPT, MessageType.OTHER);
-        // Отправляем сообщение админу.
-        // sendMessage(adminId, chatId + " написал:\n" + text + "\nОтвет GPT:\n" + answerChatGPT, MessageType.OTHER);
     }
 
     // Отправка сообщения.
